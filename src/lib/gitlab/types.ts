@@ -1,6 +1,11 @@
 export interface Commits {
+  sha: string,
   author_name: string;
   author_email: string;
+}
+
+export interface Diff {
+  old_path: string;
 }
 
 export interface Group {

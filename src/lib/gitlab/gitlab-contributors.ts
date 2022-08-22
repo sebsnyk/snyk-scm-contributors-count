@@ -5,7 +5,7 @@ import {
   ContributorMap,
   Integration,
 } from '../types';
-import { Commits, Project, Group, User } from './types';
+import { Commits, Diff, Project, Group, User } from './types';
 import { fetchAllPages } from './utils';
 import * as debugLib from 'debug';
 import { genericRepo, genericTarget } from '../common/utils';
@@ -99,6 +99,26 @@ export const fetchGitlabContributorsForProject = async (
     )) as Commits[];
     for (let i = 0; i < response.length; i++) {
       const commit = response[i];
+
+      const diffs = (await fetchAllPages(
+        `${url}/api/v4/projects/${encodedProjectPath}/repository/commits/${commit.sha}/diff`,
+        gitlabInfo.token,
+        project.id,
+      )) as Diff[];
+
+      let canUseCommit = true;
+      for (let j = 0; j < diffs.length; j++) {
+        const diff = diffs[j];
+        if (diff.old_path.endsWith('.pl')) {
+          canUseCommit = false
+          break
+        }
+      }
+
+      if (!canUseCommit) {
+        continue
+      }
+
       let contributionsCount = 1;
       let reposContributedTo = [
         `${project.path_with_namespace || project.id}(${project.visibility})`,
@@ -121,15 +141,13 @@ export const fetchGitlabContributorsForProject = async (
           : contributorsMap.get(commit.author_name)?.reposContributedTo || [];
         if (
           !reposContributedTo.includes(
-            `${project.path_with_namespace || project.id}(${
-              project.visibility
+            `${project.path_with_namespace || project.id}(${project.visibility
             })`,
           )
         ) {
           // Dedupping repo list here
           reposContributedTo.push(
-            `${project.path_with_namespace || project.id}(${
-              project.visibility
+            `${project.path_with_namespace || project.id}(${project.visibility
             })`,
           );
         }
@@ -183,13 +201,13 @@ export const fetchGitlabProjects = async (
   )) as User[];
   const fullUrlSet: string[] = !gitlabInfo.groups
     ? [
-        host.includes('gitlab.com')
-          ? '/api/v4/projects?per_page=100&membership=true'
-          : '/api/v4/projects?per_page=100',
-      ]
+      host.includes('gitlab.com')
+        ? '/api/v4/projects?per_page=100&membership=true'
+        : '/api/v4/projects?per_page=100',
+    ]
     : gitlabInfo.groups.map(
-        (group) => `/api/v4/groups/${group}/projects?per_page=100`,
-      );
+      (group) => `/api/v4/groups/${group}/projects?per_page=100`,
+    );
   if (gitlabInfo.groups) {
     fullUrlSet.push(`/api/v4/users/${user[0].id}/projects?per_page=100`);
   }
