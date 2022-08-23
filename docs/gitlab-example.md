@@ -9,6 +9,7 @@ Available options:
   --groups                  [Optional] Your Gitlab groups names to count contributors for 
                             *note* for sub-level groups, please provide the lowest level group name                
   --project                 [Optional] Your Gitlab project path with namespace to count contributors for
+  --excludedExtensions      [Optional] Excludes modified files of certain extensions when detected in commits
   --exclusionFilePath       [Optional] Exclusion list filepath
   --json                    [Optional] JSON output, requiered when using the "consolidateResults" command
 ```
@@ -44,6 +45,13 @@ snyk-scm-contributors-count gitlab --token TOKEN --groups Group --project PROJEC
 ```
 snyk-scm-contributors-count gitlab --token TOKEN --projectKeys Path1/Namespace1 --exclusionFilePath PATH_TO_FILE
 ```
+
+- I want to exclude some files by extension from being counted in theh commits => specify the `--excludedExtensions` parameter:
+```
+snyk-scm-contributors-count gitlab --token TOKEN --excludedExtensions .pl,.pm
+```
+**Warning**: This will potentially extend the script runtime significantly. In order for this script to determine the affected files of a commit, a separate API call is done to fetch the *diff* to understand the names of the changed files.
+
 
 - I want the output to be in json format => add the `--json` flag to the command:
 ```

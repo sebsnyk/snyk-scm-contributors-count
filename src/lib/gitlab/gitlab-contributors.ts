@@ -98,8 +98,6 @@ export const fetchGitlabContributorsForProject = async (
       project.id,
     )) as Commits[];
 
-    const excludedExtensions = ['.PL', '.pl', '.PM', '.pm']
-
     for (let i = 0; i < response.length; i++) {
       const commit = response[i];
 
@@ -114,9 +112,10 @@ export const fetchGitlabContributorsForProject = async (
       for (let j = 0; j < diffs.length; j++) {
         const diff = diffs[j];
 
-        if (excludedExtensions.find((extension) => {
+        if (gitlabInfo.excludedExtensions != undefined && gitlabInfo.excludedExtensions.find((extension) => {
           return diff.old_path.endsWith(extension)
         }) !== undefined) {
+          debug(`Excluding commit ${commit.id} due to ${diff.old_path} being excluded.`)
           canUseCommit = false
           break
         }
