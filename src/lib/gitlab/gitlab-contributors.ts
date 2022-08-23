@@ -97,6 +97,9 @@ export const fetchGitlabContributorsForProject = async (
       gitlabInfo.token,
       project.id,
     )) as Commits[];
+
+    const excludedExtensions = ['.PL', '.pl', '.PM', '.pm']
+
     for (let i = 0; i < response.length; i++) {
       const commit = response[i];
 
@@ -110,7 +113,10 @@ export const fetchGitlabContributorsForProject = async (
       let canUseCommit = true;
       for (let j = 0; j < diffs.length; j++) {
         const diff = diffs[j];
-        if (diff.old_path.endsWith('.pl')) {
+
+        if (excludedExtensions.find((extension) => {
+          return diff.old_path.endsWith(extension)
+        }) !== undefined) {
           canUseCommit = false
           break
         }
