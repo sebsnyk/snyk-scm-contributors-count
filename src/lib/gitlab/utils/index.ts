@@ -54,7 +54,7 @@ export const fetchAllPages = async (
         );
       } else {
         debug(
-          `Failed to fetch page${url}\n, Response Status: ${response.status}\nResponse Status Text: ${response.statusText} `,
+          `Failed to fetch page: ${url}\n, Response Status: ${response.status}\nResponse Status Text: ${response.statusText} `,
         );
       }
     }

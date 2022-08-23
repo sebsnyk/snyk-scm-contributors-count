@@ -1,5 +1,5 @@
 export interface Commits {
-  sha: string,
+  id: string,
   author_name: string;
   author_email: string;
 }

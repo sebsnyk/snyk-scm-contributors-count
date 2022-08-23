@@ -101,11 +101,12 @@ export const fetchGitlabContributorsForProject = async (
       const commit = response[i];
 
       const diffs = (await fetchAllPages(
-        `${url}/api/v4/projects/${encodedProjectPath}/repository/commits/${commit.sha}/diff`,
+        `${url}/api/v4/projects/${encodedProjectPath}/repository/commits/${commit.id}/diff`,
         gitlabInfo.token,
-        project.id,
+        `${project.id}/${commit.id}/diff`,
       )) as Diff[];
 
+      // This logic excludes a commit if ANY of the files touched matches the end pattern.
       let canUseCommit = true;
       for (let j = 0; j < diffs.length; j++) {
         const diff = diffs[j];
