@@ -43,6 +43,7 @@
     "format": "prettier --write '{''{src,test}/!(fixtures)/**/*,*}.{js,ts,json,yml}'",
     "lint": "npm run format:check && npm run lint:eslint",
     "lint:eslint": "eslint --cache '{src,test}/**/*.ts'",
+    "start": "tsc && node dist/index.js",
     "test": "snyk test && npm run lint && npm run test:unit",
     "test:unit": "jest",
     "test:coverage": "npm run test:unit -- --coverage",
