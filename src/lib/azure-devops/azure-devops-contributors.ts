@@ -10,7 +10,6 @@ import { getRepoCommits, getReposPerProjects, getProjects } from './utils';
 import { createImportFile, genericRepo, genericTarget } from '../common/utils';
 
 import * as debugLib from 'debug';
-const azureDefaultUrl = 'https://dev.azure.com/';
 const debug = debugLib('snyk:azure-devops-count');
 
 export const fetchAzureDevopsContributors = async (
@@ -46,7 +45,7 @@ export const fetchAzureDevopsContributors = async (
       azureInfo.projectKeys = [];
       projectList = projectList.concat(
         await fetchAzureProjects(
-          azureDefaultUrl,
+          azureInfo.url,
           azureInfo.OrgName,
           azureInfo.token,
         ),
@@ -127,8 +126,9 @@ export const fetchAzureContributorsForRepo = async (
     debug(
       `Fetching single repo contributor from Azure Devops. Project ${repo.project.key} - Repo ${repo.name}\n`,
     );
+
     const response = await getRepoCommits(
-      azureDefaultUrl + AzureInfo.OrgName,
+      AzureInfo.url + AzureInfo.OrgName,
       repo.project.key,
       repo.name,
       AzureInfo.token,
@@ -218,7 +218,7 @@ export const fetchAzureReposForProjects = async (
     try {
       for (let i = 0; i < AzureInfo.projectKeys.length; i++) {
         const repos = await getReposPerProjects(
-          azureDefaultUrl + AzureInfo.OrgName,
+          AzureInfo.url + AzureInfo.OrgName,
           AzureInfo.projectKeys[i],
           AzureInfo.token,
         );

@@ -45,6 +45,10 @@ export interface BitbucketServerTarget {
 }
 
 export interface AzureDevopsTarget {
+  /**
+   * Contains a single URL to a Azure DevOps instance (cloud or server)
+   */
+  url: string;
   token: string;
   OrgName: string;
   projectKeys?: string[];

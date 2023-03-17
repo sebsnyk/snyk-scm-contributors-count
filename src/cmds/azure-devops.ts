@@ -26,6 +26,11 @@ export const builder = {
     default: undefined,
     desc: 'Your Org name in Azure Devops e.g. https://dev.azure.com/{OrgName}',
   },
+  url: {
+    required: false,
+    default: undefined,
+    desc: '[Optional] Your Azure Devops host URL e.g. https://dev.azure.com/',
+  },
   projectKeys: {
     required: false,
     default: undefined,
@@ -100,6 +105,7 @@ class AzureDevops extends SCMHandlerClass {
 export async function handler(argv: {
   token: string;
   org: string;
+  url?: string;
   projectKeys?: string;
   repo?: string;
   exclusionFilePath: string;
@@ -139,7 +145,10 @@ export async function handler(argv: {
     );
     process.exit(1);
   }
+
+  const urls = argv.url ? argv.url : azureDefaultUrls
   const scmTarget: AzureDevopsTarget = {
+    url: urls.split(',')[0],
     token: argv.token,
     OrgName: argv.org,
     projectKeys: argv.projectKeys?.toString().split(','),
@@ -149,7 +158,7 @@ export async function handler(argv: {
   const azureDevopsTask = new AzureDevops(scmTarget);
 
   await azureDevopsTask.scmContributorCount(
-    azureDefaultUrls,
+    urls,
     SourceType['azure-repos'],
     argv.exclusionFilePath,
     argv.json,
