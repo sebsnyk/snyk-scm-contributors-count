@@ -63,6 +63,7 @@ export interface GitlabTarget {
   url?: string;
   groups?: string[];
   project?: string;
+  excludedExtensions: string[];
 }
 
 export interface GithubTarget {

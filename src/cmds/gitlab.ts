@@ -3,6 +3,7 @@ import { GitlabTarget, ContributorMap, Integration } from '../lib/types';
 import { SCMHandlerClass } from '../lib/common/SCMHandler';
 import { SourceType } from '../lib/snyk';
 import { fetchGitlabContributors } from '../lib/gitlab/gitlab-contributors';
+import { ADDRCONFIG } from 'dns';
 
 const debug = debugLib('snyk:gitlab-count');
 const d = new Date();
@@ -31,6 +32,11 @@ export const builder = {
     required: false,
     default: undefined,
     desc: '[Optional] Gitlab project path with namespace to count contributors for.\n e.g snyk-test-group/goof-project',
+  },
+  excludedExtensions: {
+    required: false,
+    default: undefined,
+    desc: '[Optional] Specify list of file extensions, separated by commas, to exclude from any calculations',
   },
   exclusionFilePath: {
     required: false,
@@ -78,6 +84,7 @@ export async function handler(argv: {
   url: string;
   groups: string[];
   project: string;
+  excludedExtensions: string[];
   exclusionFilePath: string;
   json: boolean;
 }): Promise<void> {
@@ -96,6 +103,7 @@ export async function handler(argv: {
     url: argv.url.endsWith('/') ? argv.url.slice(0, -1) : argv.url,
     groups: argv.groups?.toString().split(','),
     project: argv.project,
+    excludedExtensions: argv.excludedExtensions?.toString().split(','),
   };
 
   const gitlabTask = new Gitlab(scmTarget);
