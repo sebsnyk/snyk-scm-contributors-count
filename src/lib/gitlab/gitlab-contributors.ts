@@ -5,10 +5,13 @@ import {
   ContributorMap,
   Integration,
 } from '../types';
-import { Commits, Project, Group, User } from './types';
+import { Commits, Project, Group, User, Diff } from './types';
 import { fetchAllPages } from './utils';
 import * as debugLib from 'debug';
 import { genericRepo, genericTarget } from '../common/utils';
+import { stringify } from 'csv-stringify/sync';
+import { string } from 'yargs';
+import { writeFile } from 'fs';
 
 const gitlabDefaultUrl = 'https://gitlab.com/';
 const debug = debugLib('snyk:gitlab-count');
@@ -18,6 +21,13 @@ export const fetchGitlabContributors = async (
   threeMonthsDate: string,
 ): Promise<ContributorMap> => {
   const contributorsMap = new Map<Username, Contributor>();
+
+
+  const listOfExtensionsEncountered = new Set<string>()
+
+  // email to map of extension + count
+  const filesTouched = new Map<string, Map<string, number>>();
+
   try {
     let projectList: Project[] = [];
     // In Gitlab there's no need to provide a group for fetching project details, the project's path/namespace is enough
@@ -67,9 +77,44 @@ export const fetchGitlabContributors = async (
         gitlabInfo,
         projectList[i],
         contributorsMap,
+        listOfExtensionsEncountered,
+        filesTouched,
         threeMonthsDate,
       );
     }
+
+
+    let csvMap: string[][] = []
+
+    let header = ['author']
+    for (const extension of listOfExtensionsEncountered) {
+      header.push(extension)
+    }
+    csvMap.push(header)
+
+    for (const author of filesTouched.keys()) {
+      const touched = filesTouched.get(author)
+
+      if (touched == undefined) {
+        continue
+      }
+
+      let row = [author]
+      for (const extension of listOfExtensionsEncountered) {
+        row.push((touched.get(extension) ?? 0).toString())
+      }
+      csvMap.push(row)
+    }
+
+    writeFile('contributor-breakdown.csv', stringify(csvMap), err => {
+      if (err) {
+        debug('Failed to write contributor breakdown CSV.\n' + err)
+        console.log(
+          'Failed to write contributor-breakdown.csv. Try running with `DEBUG=snyk* snyk-contributor`',
+        );
+      }
+    })
+    // console.log()
   } catch (err) {
     debug('Failed to retrieve contributors from Gitlab.\n' + err);
     console.log(
@@ -85,6 +130,8 @@ export const fetchGitlabContributorsForProject = async (
   gitlabInfo: GitlabTarget,
   project: Project,
   contributorsMap: ContributorMap,
+  discoveredExtensions: Set<string>,
+  filesTouched: Map<string, Map<string, number>>,
   threeMonthsDate: string,
 ): Promise<void> => {
   try {
@@ -97,8 +144,11 @@ export const fetchGitlabContributorsForProject = async (
       gitlabInfo.token,
       project.id,
     )) as Commits[];
+
+
     for (let i = 0; i < response.length; i++) {
       const commit = response[i];
+
       let contributionsCount = 1;
       let reposContributedTo = [
         `${project.path_with_namespace || project.id}(${project.visibility})`,
@@ -121,15 +171,13 @@ export const fetchGitlabContributorsForProject = async (
           : contributorsMap.get(commit.author_name)?.reposContributedTo || [];
         if (
           !reposContributedTo.includes(
-            `${project.path_with_namespace || project.id}(${
-              project.visibility
+            `${project.path_with_namespace || project.id}(${project.visibility
             })`,
           )
         ) {
           // Dedupping repo list here
           reposContributedTo.push(
-            `${project.path_with_namespace || project.id}(${
-              project.visibility
+            `${project.path_with_namespace || project.id}(${project.visibility
             })`,
           );
         }
@@ -143,19 +191,49 @@ export const fetchGitlabContributorsForProject = async (
         !commit.author_email.endsWith('@users.noreply.github.com') &&
         commit.author_email != 'snyk-bot@snyk.io'
       ) {
+        const touched = filesTouched.get(commit.author_email) ?? new Map<string, number>();
+
         contributorsMap.set(isDuplicateName, {
           email: commit.author_email,
           contributionsCount: contributionsCount,
           reposContributedTo: reposContributedTo,
         });
+
+        const diffs = (await fetchAllPages(
+          `${url}/api/v4/projects/${encodedProjectPath}/repository/commits/${commit.id}/diff`,
+          gitlabInfo.token,
+          `${project.id}/${commit.id}/diff`,
+        )) as Diff[];
+
+        for (const diff of diffs) {
+          // path/to/file.type
+          let extension = diff.old_path.split('.').pop()
+          if (extension === undefined) {
+            // path/to/file
+            extension = diff.old_path.split('/').pop()
+            if (extension === undefined) {
+              // file
+              extension = diff.old_path
+            }
+          }
+
+          discoveredExtensions.add(extension)
+
+          const count = touched.get(extension) ?? 0
+          touched.set(extension, count + 1)
+        }
+
+        filesTouched.set(commit.author_email, touched)
       }
     }
+
   } catch (err) {
     debug('Failed to retrieve commits from Gitlab.\n' + err);
     console.log(
       'Failed to retrieve commits from Gitlab. Try running with `DEBUG=snyk* snyk-contributor`',
     );
   }
+
 };
 
 const changeDuplicateAuthorNames = async (
@@ -183,13 +261,13 @@ export const fetchGitlabProjects = async (
   )) as User[];
   const fullUrlSet: string[] = !gitlabInfo.groups
     ? [
-        host.includes('gitlab.com')
-          ? '/api/v4/projects?per_page=100&membership=true'
-          : '/api/v4/projects?per_page=100',
-      ]
+      host.includes('gitlab.com')
+        ? '/api/v4/projects?per_page=100&membership=true'
+        : '/api/v4/projects?per_page=100',
+    ]
     : gitlabInfo.groups.map(
-        (group) => `/api/v4/groups/${group}/projects?per_page=100`,
-      );
+      (group) => `/api/v4/groups/${group}/projects?per_page=100`,
+    );
   if (gitlabInfo.groups) {
     fullUrlSet.push(`/api/v4/users/${user[0].id}/projects?per_page=100`);
   }

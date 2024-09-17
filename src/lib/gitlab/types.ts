@@ -1,6 +1,11 @@
 export interface Commits {
+  id: string,
   author_name: string;
   author_email: string;
+}
+
+export interface Diff {
+  old_path: string;
 }
 
 export interface Group {
